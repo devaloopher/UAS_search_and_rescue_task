@@ -29,10 +29,9 @@ for a in casualties_sorted:
 
 camps = {"blue" : {"capacity" : 4, "assigned" : []}, "pink" : {"capacity" : 3, "assigned" : []}, "grey" : {"capacity" : 2, "assigned" : []}}
 
-########### 26 jan ##############
+########### 26 jan and 27 jan ##############
 import cv2 as cv
 import numpy as np
-from numpy.ma.core import shape
 
 img = cv.imread('/Users/DevanshiJaiswal/Desktop/1.png')
 
@@ -41,46 +40,52 @@ hsv = cv.cvtColor(img, cv.COLOR_BGR2HSV)
 
 #age(shape) detection
 gray = cv.cvtColor(img, cv.COLOR_BGR2GRAY)
-blur = cv.GaussianBlur(gray, (9,9), 0)   #to reduce noise- (5,5) is kernel size
+blur = cv.GaussianBlur(gray, (7,7), 1.5)   #to reduce noise- (5,5) is kernel size
 edge = cv.Canny(blur, 50, 150)     #edge detection - contours are found from edges, 50 and 150 are lower and upper thresholds
 
 contour, _ = cv.findContours(edge, cv.RETR_EXTERNAL, cv.CHAIN_APPROX_SIMPLE)     #to find contour, RETR_EXTERNAL only outer contours not holes, CHAIN_APPROX_SIMPLE compresses pts
 
 for cnt in contour:
     area = cv.contourArea(cnt)
-    if area < 500:                            #ignore small noise
+    if area < 1:                            #ignore small noise
         continue
     perimeter = cv.arcLength(cnt, True)       #approx contour
-    approx = cv.approxPolyDP(cnt, 0.02 * perimeter, True)
+    circularity = 4 * np.pi * area / (perimeter * perimeter)    #to identify circles
 
-    vertices = len(approx)
+    shape = "unknown"
 
-    if vertices == 3:
-        shape = ("Triangle")
-
-    elif vertices == 4:
-        x, y, w, h = cv.boundingRect(approx)
-        aspect_ratio = float(w) / h
-        if aspect_ratio >= 0.95 and aspect_ratio <= 1.05:
-            shape = "square"
-        else:
-            shape = "rectangle"
-
-    elif vertices == 10:
-        shape = "star"
-
-    elif vertices > 11:
+    if circularity > 0.88:       #to ensure that every shapes which looks like a circle is identified as circle
         shape = "camp"
-    cv.drawContours(img, [cnt], -1, (0, 255, 0), 2)
+
+    else:
+        epsilon = 0.03 * cv.arcLength(cnt, True)
+        approx = cv.approxPolyDP(cnt, epsilon, True)
+        vertices = len(approx)
+
+        if vertices == 3:
+            shape = ("Triangle")
+
+        elif vertices == 4:
+            x, y, w, h = cv.boundingRect(approx)
+            aspect_ratio = float(w) / h
+            if 0.95 <= aspect_ratio <= 1.05:       #to eliminate unevenness
+                shape = "square"
+            else:
+                shape = "rectangle"
+
+        elif 8 <= vertices <= 12:
+            shape = "star"
+
+    cv.drawContours(img, [cnt], -1, (0, 255, 0), 2)      #to outline the shape
     # Find contour center and put text
-    M = cv.moments(cnt)
-    if M["m00"] != 0:
-        cX = int(M["m10"] / M["m00"])
+    M = cv.moments(cnt)        #moments are mathematical summary of a shape, describes things like area, center,spread
+    if M["m00"] != 0:          #m00 is area of contour, safety check to ensure if area is zero its not recognized.
+        cX = int(M["m10"] / M["m00"])     #entroid
         cY = int(M["m01"] / M["m00"])
-       # cv.putText(img, shape, (cX, cY), cv.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 2)
+        cv.putText(img, shape, (cX, cY), cv.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 2)
 
 
 
 cv.imshow('Image ', img)
 cv.waitKey(0)
-cv.deleteAllWindows()
+cv.destroyAllWindows()
