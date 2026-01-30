@@ -1,4 +1,1 @@
-# Day 1 - 24 JAN
-- read the document, understood the task, made a roadmap to follow
-- set up github repo
-- 
+https://docs.google.com/document/d/1msCZsZBQerOYCevbDr_0XuJ5DL2ogWGn1kEyJ48ya-k/edit?usp=sharing
